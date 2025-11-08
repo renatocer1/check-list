@@ -1,0 +1,9 @@
+{
+  "name": "Checklist de Veículos Inteligente",
+  "description": "Um aplicativo de checklist para caminhões, ônibus e carros com um assistente de IA conversacional, análise de imagens, e um painel de controle de viagem para monitorar KM, consumo de combustível e muito mais.",
+  "requestFramePermissions": [
+    "microphone",
+    "geolocation",
+    "camera"
+  ]
+}
