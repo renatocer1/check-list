@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import TripSetup from './components/TripSetup';
 import Dashboard from './components/Dashboard';
-import { TripData, VehicleType, ChecklistItem, MaintenanceAlert, LatLng, StopPoint, VehicleConditionItem } from './types';
+import { TripData, VehicleType, ChecklistItem, MaintenanceAlert, LatLng, StopPoint, VehicleConditionItem, Expense } from './types';
 import { CHECKLIST_ITEMS } from './constants';
 
 const APP_STORAGE_KEY = 'checklistApp_tripData';
@@ -58,6 +59,7 @@ const App: React.FC = () => {
       route: [],
       stops: [],
       vehicleConditions: [],
+      expenses: [],
       generalObservations: '',
       driverSignature: '',
     });
@@ -134,6 +136,16 @@ const App: React.FC = () => {
      setTripData(prev => prev ? ({ ...prev, driverSignature: signature }) : null);
   };
   
+  const handleAddExpense = (expense: Omit<Expense, 'id'>) => {
+    if (tripData) {
+        const newExpense = { ...expense, id: new Date().toISOString() };
+        setTripData(prev => ({
+            ...prev!,
+            expenses: [...prev!.expenses, newExpense]
+        }));
+    }
+  };
+  
   useEffect(() => {
     if (isTracking) {
       watchIdRef.current = navigator.geolocation.watchPosition(
@@ -186,6 +198,7 @@ const App: React.FC = () => {
           onAddStop={handleAddStop}
           onAddVehicleCondition={handleAddVehicleCondition}
           onUpdateSignature={handleUpdateSignature}
+          onAddExpense={handleAddExpense}
           onEndTrip={handleEndTrip}
         />
       )}

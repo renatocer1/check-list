@@ -1,3 +1,4 @@
+
 export enum VehicleType {
   Car = 'Carro',
   Bus = 'Ônibus',
@@ -45,6 +46,14 @@ export interface VehicleConditionItem {
   imageUrl: string;
 }
 
+export interface Expense {
+  id: string;
+  category: 'Pedágio' | 'Alimentação' | 'Hospedagem' | 'Outros';
+  amount: number;
+  description: string;
+  timestamp: string;
+}
+
 export interface TripData {
   driverName: string;
   vehicleType: VehicleType;
@@ -60,6 +69,7 @@ export interface TripData {
   route: LatLng[];
   stops: StopPoint[];
   vehicleConditions: VehicleConditionItem[];
+  expenses: Expense[];
   generalObservations: string;
   driverSignature: string; // Base64 encoded image
 }

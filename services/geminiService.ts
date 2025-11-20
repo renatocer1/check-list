@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 import { ChecklistItem, TripData } from "../types";
 import { VEHICLE_CONDITION_CODES } from "../constants";
@@ -131,11 +132,12 @@ export const getImprovementSuggestion = async (tripData: TripData): Promise<stri
   const consumoCombustivel = kmPercorridos > 0 && tripData.fuelAdded > 0 ? (kmPercorridos / tripData.fuelAdded).toFixed(2) : 'N/A';
   const checklistIssues = tripData.checklist.filter(i => !i.checked);
   const conditionIssues = tripData.vehicleConditions;
+  const totalDespesas = tripData.expenses.reduce((acc, curr) => acc + curr.amount, 0);
 
   const prompt = `
-    Você é um assistente especialista em gestão de frotas e segurança no trânsito.
+    Você é um assistente especialista em gestão de frotas, finanças e segurança no trânsito.
     Baseado nos dados parciais da viagem abaixo, gere uma dica útil e personalizada para o motorista.
-    A dica deve ser curta (1 a 2 frases), amigável e focada em um aspecto relevante: segurança, economia de combustível, manutenção preventiva ou eficiência.
+    A dica deve ser curta (1 a 2 frases), amigável e focada em um aspecto relevante: segurança, economia de combustível, gastos ou manutenção.
 
     Dados da Viagem:
     - Veículo: ${tripData.vehicleType}
@@ -144,10 +146,11 @@ export const getImprovementSuggestion = async (tripData: TripData): Promise<stri
     - Itens de checklist com problemas: ${checklistIssues.length}
     - Avarias reportadas: ${conditionIssues.length}
     - Número de paradas: ${tripData.stops.length}
+    - Total de Despesas Extras (sem combustível): R$ ${totalDespesas.toFixed(2)}
 
     Exemplos de Dicas:
     - "Notei algumas paradas. Lembre-se de fazer um alongamento rápido para manter o foco na estrada!"
-    - "Bom trabalho no checklist! Manter os pneus calibrados pode economizar até 3% de combustível."
+    - "Seus gastos com alimentação estão um pouco altos, que tal planejar a próxima parada em um local mais econômico?"
     - "Com ${checklistIssues.length} ${checklistIssues.length === 1 ? 'item' : 'itens'} pendente no checklist, que tal verificar novamente a iluminação antes de pegar a estrada à noite?"
 
     Gere uma nova dica relevante para o contexto atual.
