@@ -1,20 +1,38 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Checklist Inteligente com IA Gemini
 
-# Run and deploy your AI Studio app
+Este é um aplicativo avançado de gestão de frota e checklist veicular, equipado com Inteligência Artificial do Google Gemini.
 
-This contains everything you need to run your app locally.
+## Funcionalidades Principais
 
-View your app in AI Studio: https://ai.studio/apps/drive/1nLHjOmpMJ7iWI-Vo6laI8VKtNz2DjDtJ
+*   **Checklist Conversacional:** O motorista fala com o app para preencher o checklist.
+*   **Diagnóstico por IA:** Usa o Gemini Thinking Mode para analisar problemas mecânicos complexos.
+*   **Visão Computacional:** Analisa fotos de avarias e pneus.
+*   **Gemini Live:** Copiloto de voz em tempo real.
+*   **Integração Firebase:** Sincronização de dados em tempo real com o painel do gestor.
+*   **PWA:** Instalável em Android e iOS.
 
-## Run Locally
+## Como Publicar (Deploy)
 
-**Prerequisites:**  Node.js
+Para colocar este app no ar, siga estes passos:
 
+1.  **Configurar Firebase:**
+    *   Crie um projeto no [Firebase Console](https://console.firebase.google.com/).
+    *   Habilite o **Firestore Database**.
+    *   Copie as configurações do projeto (Web App).
+    *   Atualize o arquivo `services/firebase.ts` com suas chaves reais.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+2.  **Hospedagem (Sugestão: Vercel ou Netlify):**
+    *   Este projeto usa Vite e React.
+    *   Conecte seu repositório GitHub na Vercel.
+    *   A Vercel detectará automaticamente as configurações do Vite.
+    *   **Importante:** Adicione a variável de ambiente `API_KEY` no painel da Vercel com sua chave da API do Google Gemini.
+
+3.  **Instalação no Celular:**
+    *   Acesse a URL gerada (ex: `seu-app.vercel.app`) pelo navegador do celular (Chrome no Android ou Safari no iOS).
+    *   Toque em "Compartilhar" -> "Adicionar à Tela de Início".
+
+## Variáveis de Ambiente
+
+O app espera as seguintes variáveis (seja via `.env` local ou configuração do servidor de hospedagem):
+
+*   `API_KEY`: Sua chave da API Google Gemini (AI Studio).

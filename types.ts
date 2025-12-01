@@ -55,6 +55,7 @@ export interface Expense {
 }
 
 export interface TripData {
+  id?: string; // Firestore ID
   driverName: string;
   vehicleType: VehicleType;
   plate: string;
@@ -72,4 +73,5 @@ export interface TripData {
   expenses: Expense[];
   generalObservations: string;
   driverSignature: string; // Base64 encoded image
+  createdAt?: any; // Firebase Timestamp
 }

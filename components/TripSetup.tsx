@@ -1,11 +1,13 @@
+
 import React, { useState } from 'react';
 import { VehicleType } from '../types';
 
 interface TripSetupProps {
   onStartTrip: (driverName: string, vehicleType: VehicleType, initialKm: number, plate: string) => void;
+  onEnterAdmin: () => void;
 }
 
-const TripSetup: React.FC<TripSetupProps> = ({ onStartTrip }) => {
+const TripSetup: React.FC<TripSetupProps> = ({ onStartTrip, onEnterAdmin }) => {
   const [driverName, setDriverName] = useState('');
   const [vehicleType, setVehicleType] = useState<VehicleType>(VehicleType.Truck);
   const [initialKm, setInitialKm] = useState('');
@@ -20,7 +22,12 @@ const TripSetup: React.FC<TripSetupProps> = ({ onStartTrip }) => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
-      <div className="w-full max-w-md mx-auto bg-gray-800 rounded-2xl shadow-lg p-8 space-y-6">
+      <div className="w-full max-w-md mx-auto bg-gray-800 rounded-2xl shadow-lg p-8 space-y-6 relative">
+        <div className="absolute top-4 right-4">
+          <button onClick={onEnterAdmin} className="text-xs text-gray-500 hover:text-blue-400 transition-colors">
+            Sou Gestor
+          </button>
+        </div>
         <div className="text-center">
           <h1 className="text-3xl font-bold text-white">Checklist Inteligente</h1>
           <p className="text-gray-400 mt-2">Preencha os dados para iniciar sua viagem.</p>

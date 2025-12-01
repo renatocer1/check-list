@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { analyzeVehicleDamage } from '../services/geminiService';
+import { analyzeVehicleDamage, editDamageImage, generateReferenceImage } from '../services/geminiService';
 import { VehicleConditionItem } from '../types';
 import Loader from './Loader';
 import { CameraIcon } from './icons/CameraIcon';
@@ -14,6 +15,10 @@ const VehicleConditionAnalyzer: React.FC<VehicleConditionAnalyzerProps> = ({ con
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [partName, setPartName] = useState('');
+    
+    // Advanced Image Features State
+    const [generatedRefImage, setGeneratedRefImage] = useState<string | null>(null);
+    const [editInstruction, setEditInstruction] = useState('');
 
     const handleImageCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -27,7 +32,10 @@ const VehicleConditionAnalyzer: React.FC<VehicleConditionAnalyzerProps> = ({ con
         reader.onloadend = async () => {
             try {
                 const base64Image = (reader.result as string).split(',')[1];
+                
+                // Check if user wants to edit first (simple implementation logic: direct analysis, but could add edit step)
                 const result = await analyzeVehicleDamage(base64Image, file.type);
+                
                 if (result) {
                     onAddCondition({
                         id: new Date().toISOString(),
@@ -50,29 +58,64 @@ const VehicleConditionAnalyzer: React.FC<VehicleConditionAnalyzerProps> = ({ con
         };
     };
 
+    const handleGenerateReference = async () => {
+        if (!partName) {
+            setError("Digite o nome da peça para gerar referência.");
+            return;
+        }
+        setIsLoading(true);
+        const base64 = await generateReferenceImage(partName);
+        if (base64) {
+            setGeneratedRefImage(`data:image/png;base64,${base64}`);
+        } else {
+            setError("Falha ao gerar imagem de referência.");
+        }
+        setIsLoading(false);
+    };
+
     return (
         <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
             <h3 className="text-xl font-bold mb-4 text-white">Análise de Conservação do Veículo</h3>
             
             <div className="bg-gray-900/50 p-4 rounded-lg space-y-3">
-                <p className="text-sm text-gray-300">Registre qualquer avaria encontrada no veículo. A IA irá analisar e classificar o dano.</p>
-                <div className="flex gap-2">
-                    <input
+                <p className="text-sm text-gray-300">Registre qualquer avaria ou gere uma imagem de referência para comparação.</p>
+                
+                <input
                       type="text"
                       value={partName}
                       onChange={(e) => setPartName(e.target.value)}
-                      placeholder="Parte do veículo (ex: Para-choque)"
-                      className="flex-grow bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white"
+                      placeholder="Nome da Peça (ex: Farol Dianteiro)"
+                      className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white"
                       disabled={isLoading}
-                    />
-                    <label htmlFor="damage-capture" className={`flex items-center justify-center gap-2 py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-all duration-200 ${isLoading ? 'bg-gray-500 cursor-not-allowed' : 'cursor-pointer'}`}>
+                />
+
+                <div className="flex gap-2 flex-wrap">
+                    <label htmlFor="damage-capture" className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 py-2 px-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-all cursor-pointer ${isLoading ? 'opacity-50' : ''}`}>
                        <CameraIcon className="w-5 h-5" />
-                       <span>{isLoading ? 'Analisando...' : 'Analisar Avaria'}</span>
+                       <span>{isLoading ? '...' : 'Analisar Foto'}</span>
                        <input id="damage-capture" type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageCapture} disabled={isLoading} />
                     </label>
+                    
+                    <button 
+                        onClick={handleGenerateReference}
+                        disabled={isLoading || !partName}
+                        className="flex-1 min-w-[120px] py-2 px-3 bg-purple-600 text-white font-semibold rounded-lg shadow-md hover:bg-purple-700 disabled:bg-gray-600 transition-all"
+                    >
+                        Gerar Referência
+                    </button>
                 </div>
+                
                 {isLoading && <Loader size="sm" />}
                 {error && <p className="text-red-400 text-sm">{error}</p>}
+
+                {/* Generated Reference Image Display */}
+                {generatedRefImage && (
+                    <div className="mt-4 p-2 bg-gray-800 rounded border border-purple-500/50">
+                        <p className="text-xs text-purple-300 mb-1">Imagem de Referência (Gerada por IA):</p>
+                        <img src={generatedRefImage} alt="Referência" className="w-full rounded-md" />
+                        <button onClick={() => setGeneratedRefImage(null)} className="mt-2 text-xs text-gray-400 underline">Fechar</button>
+                    </div>
+                )}
             </div>
 
             <div className="mt-4 space-y-3 max-h-60 overflow-y-auto pr-2">

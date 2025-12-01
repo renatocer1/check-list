@@ -6,12 +6,12 @@ import { VEHICLE_CONDITION_CODES } from "../constants";
 const API_KEY = process.env.API_KEY;
 
 if (!API_KEY) {
-  // In a real app, you'd handle this more gracefully.
-  // For this context, we assume the key is present.
   console.warn("API_KEY environment variable not set.");
 }
 
 const ai = new GoogleGenAI({ apiKey: API_KEY! });
+
+// --- EXISTING FEATURES ---
 
 export const generateSpeech = async (text: string): Promise<string | null> => {
   try {
@@ -51,53 +51,34 @@ export const analyzeImage = async (prompt: string, imageBase64: string, mimeType
       contents: { parts: [imagePart, textPart] },
     });
 
-    return response.text;
+    return response.text || "Não foi possível analisar.";
   } catch (error) {
     console.error("Error analyzing image:", error);
-    return "Desculpe, não consegui analisar a imagem.";
+    return "Desculpe, erro na análise.";
   }
 };
 
 export const summarizeChecklistIssues = async (items: ChecklistItem[]): Promise<string> => {
   const issues = items.filter(item => !item.checked && item.observation);
   if (issues.length === 0) {
-    return "Todos os itens do checklist foram verificados e estão em conformidade. Nenhuma pendência encontrada.";
+    return "Checklist ok. Nenhuma pendência.";
   }
-
-  const prompt = `
-    Você é um assistente de gestão de frotas. Resuma os seguintes problemas encontrados durante um checklist de veículo de forma clara e direta.
-    O resumo deve ser útil para um gerente de manutenção.
-    
-    Itens com problemas:
-    ${issues.map(item => `- ${item.label}: ${item.observation}`).join('\n')}
-    
-    Gere um resumo conciso.
-  `;
-
+  const prompt = `Resuma problemas: ${issues.map(item => `- ${item.label}: ${item.observation}`).join('\n')}`;
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
-    return response.text;
-  } catch (error) {
-    console.error("Error summarizing issues:", error);
-    return "Não foi possível gerar o resumo dos problemas do checklist.";
-  }
+    return response.text || "";
+  } catch (error) { return "Erro ao resumir."; }
 };
 
 export const analyzeVehicleDamage = async (imageBase64: string, mimeType: string): Promise<{ damageCode: string; description: string } | null> => {
   const codes = Object.entries(VEHICLE_CONDITION_CODES).map(([code, desc]) => `${code} = ${desc}`).join(', ');
-  const prompt = `Analise a imagem de uma parte de um veículo. Identifique o tipo de dano principal e classifique-o com um dos seguintes códigos: ${codes}. Descreva o dano de forma concisa.`;
+  const prompt = `Analise a imagem. Identifique o dano e classifique: ${codes}.`;
 
   try {
-     const imagePart = {
-      inlineData: {
-        data: imageBase64,
-        mimeType,
-      },
-    };
-
+     const imagePart = { inlineData: { data: imageBase64, mimeType } };
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: { parts: [imagePart, {text: prompt}] },
@@ -106,64 +87,137 @@ export const analyzeVehicleDamage = async (imageBase64: string, mimeType: string
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            damageCode: {
-              type: Type.STRING,
-              description: `Um dos códigos: ${Object.keys(VEHICLE_CONDITION_CODES).join(', ')}`,
-            },
-            description: {
-              type: Type.STRING,
-              description: 'Uma breve descrição do dano visível na imagem.',
-            },
+            damageCode: { type: Type.STRING },
+            description: { type: Type.STRING },
           }
         }
       }
     });
-    
-    const jsonText = response.text.trim();
-    return JSON.parse(jsonText) as { damageCode: string; description: string };
+    return JSON.parse(response.text.trim());
+  } catch (error) { return null; }
+};
+
+export const getImprovementSuggestion = async (tripData: TripData): Promise<string> => {
+  const prompt = `Dê uma dica rápida e útil de segurança ou economia para um motorista de ${tripData.vehicleType}.`;
+  try {
+    const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+    return response.text || "";
+  } catch { return "Dirija com cuidado!"; }
+};
+
+// --- NEW ADVANCED FEATURES ---
+
+// 1. Thinking Mode for Complex Diagnostics
+export const diagnoseVehicleIssue = async (problemDescription: string, vehicleContext: string): Promise<string> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: `Atue como um mecânico especialista sênior. O motorista relatou: "${problemDescription}". Veículo: ${vehicleContext}. Pense passo a passo nas possíveis causas, sintomas correlacionados e recomende a ação imediata.`,
+      config: {
+        thinkingConfig: { thinkingBudget: 1024 }, // Budget ajustado para resposta rápida mas pensada
+      }
+    });
+    return response.text || "Não consegui formular um diagnóstico.";
   } catch (error) {
-    console.error("Error analyzing vehicle damage:", error);
+    console.error("Thinking mode error:", error);
+    return "Erro ao processar diagnóstico complexo.";
+  }
+};
+
+// 2. Maps Grounding
+export const findNearbyServices = async (query: string, lat: number, lng: number): Promise<string> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `Encontre: ${query}. Forneça nomes, endereços e avaliações se possível.`,
+      config: {
+        tools: [{ googleMaps: {} }],
+        toolConfig: {
+          retrievalConfig: {
+            latLng: { latitude: lat, longitude: lng }
+          }
+        }
+      }
+    });
+    // Extract chunks for UI if needed, but returning text is simpler for now
+    return response.text || "Nenhum local encontrado nas proximidades.";
+  } catch (error) {
+    console.error("Maps grounding error:", error);
+    return "Erro ao buscar no mapa.";
+  }
+};
+
+// 3. Search Grounding
+export const searchInfo = async (query: string): Promise<string> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `Pesquise informações recentes sobre: ${query}. Responda de forma resumida para um motorista.`,
+      config: {
+        tools: [{ googleSearch: {} }],
+      }
+    });
+    return response.text || "Sem informações encontradas.";
+  } catch (error) {
+    console.error("Search grounding error:", error);
+    return "Erro na pesquisa.";
+  }
+};
+
+// 4. Image Editing (Nano Banana / Gemini Flash Image)
+export const editDamageImage = async (imageBase64: string, mimeType: string, instruction: string): Promise<string | null> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: {
+        parts: [
+          { inlineData: { data: imageBase64, mimeType } },
+          { text: instruction } // e.g., "Circule o arranhão em vermelho"
+        ]
+      }
+    });
+    
+    // Iterate to find the image part
+    for (const part of response.candidates?.[0]?.content?.parts || []) {
+      if (part.inlineData) {
+        return part.inlineData.data;
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error("Image editing error:", error);
     return null;
   }
 };
 
-export const getImprovementSuggestion = async (tripData: TripData): Promise<string> => {
-  const kmPercorridos = tripData.finalKm > tripData.initialKm ? tripData.finalKm - tripData.initialKm : 0;
-  const consumoCombustivel = kmPercorridos > 0 && tripData.fuelAdded > 0 ? (kmPercorridos / tripData.fuelAdded).toFixed(2) : 'N/A';
-  const checklistIssues = tripData.checklist.filter(i => !i.checked);
-  const conditionIssues = tripData.vehicleConditions;
-  const totalDespesas = tripData.expenses.reduce((acc, curr) => acc + curr.amount, 0);
-
-  const prompt = `
-    Você é um assistente especialista em gestão de frotas, finanças e segurança no trânsito.
-    Baseado nos dados parciais da viagem abaixo, gere uma dica útil e personalizada para o motorista.
-    A dica deve ser curta (1 a 2 frases), amigável e focada em um aspecto relevante: segurança, economia de combustível, gastos ou manutenção.
-
-    Dados da Viagem:
-    - Veículo: ${tripData.vehicleType}
-    - KM Percorridos até agora: ${kmPercorridos} km
-    - Consumo Médio: ${consumoCombustivel} km/l
-    - Itens de checklist com problemas: ${checklistIssues.length}
-    - Avarias reportadas: ${conditionIssues.length}
-    - Número de paradas: ${tripData.stops.length}
-    - Total de Despesas Extras (sem combustível): R$ ${totalDespesas.toFixed(2)}
-
-    Exemplos de Dicas:
-    - "Notei algumas paradas. Lembre-se de fazer um alongamento rápido para manter o foco na estrada!"
-    - "Seus gastos com alimentação estão um pouco altos, que tal planejar a próxima parada em um local mais econômico?"
-    - "Com ${checklistIssues.length} ${checklistIssues.length === 1 ? 'item' : 'itens'} pendente no checklist, que tal verificar novamente a iluminação antes de pegar a estrada à noite?"
-
-    Gere uma nova dica relevante para o contexto atual.
-  `;
-
+// 5. Image Generation (Reference Parts)
+export const generateReferenceImage = async (partName: string): Promise<string | null> => {
   try {
+    // Using generateContent for 3-pro-image-preview as per guidelines
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
+      model: 'gemini-3-pro-image-preview',
+      contents: {
+        parts: [{ text: `Uma foto técnica e clara de uma peça automotiva nova: ${partName}, fundo branco, alta qualidade.` }]
+      },
+      config: {
+        imageConfig: {
+          aspectRatio: "4:3",
+          imageSize: "1K"
+        }
+      }
     });
-    return response.text;
+
+    for (const part of response.candidates?.[0]?.content?.parts || []) {
+      if (part.inlineData) {
+        return part.inlineData.data;
+      }
+    }
+    return null;
   } catch (error) {
-    console.error("Error getting improvement suggestion:", error);
-    return "Não foi possível gerar uma dica no momento. Mantenha a direção segura!";
+    console.error("Image generation error:", error);
+    return null;
   }
 };
+
+// Export AI instance for Live API usage in components
+export { ai };

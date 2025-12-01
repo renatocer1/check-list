@@ -61,8 +61,9 @@ const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ expenses, onAddExpense,
         <h4 className="font-medium text-white">Adicionar Nova Despesa</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-                <label className="block text-xs text-gray-300 mb-1">Categoria</label>
+                <label htmlFor="expense-category" className="block text-xs text-gray-300 mb-1">Categoria</label>
                 <select
+                id="expense-category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value as Expense['category'])}
                 className="w-full bg-gray-800 border border-gray-600 rounded-md py-2 px-3 text-white"
@@ -74,8 +75,9 @@ const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ expenses, onAddExpense,
                 </select>
             </div>
             <div>
-                <label className="block text-xs text-gray-300 mb-1">Valor (R$)</label>
+                <label htmlFor="expense-amount" className="block text-xs text-gray-300 mb-1">Valor (R$)</label>
                 <input
+                id="expense-amount"
                 type="number"
                 step="0.01"
                 value={amount}
@@ -87,8 +89,9 @@ const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ expenses, onAddExpense,
             </div>
         </div>
         <div>
-            <label className="block text-xs text-gray-300 mb-1">Descrição (Opcional)</label>
+            <label htmlFor="expense-desc" className="block text-xs text-gray-300 mb-1">Descrição (Opcional)</label>
             <input
+            id="expense-desc"
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
